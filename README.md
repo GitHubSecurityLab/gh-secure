@@ -53,23 +53,19 @@ Pass one or more feature names to enable only specific features. If none are spe
 This tool enables five security features based on [GitHub Security Lab recommendations](https://securitylab.github.com/protect-your-project.html):
 
 ### 1. Branch Protection
-Protects your main branch from unauthorized changes:
-- Requires 1 pull request review before merging
-- Dismisses stale reviews when new commits are pushed
-- Prevents force pushes and branch deletion
-- Requires conversation resolution before merging
+Branch protection blocks unwanted changes to your project. Prevent accidental or malicious commits that may introduce vulnerabilities or disrupt the stability of your project. Branch rules give you flexible control over who can force push, delete, etc. [Documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches)
 
 ### 2. Private Vulnerability Reporting
-Lets security researchers privately report vulnerabilities to you, giving you time to fix issues before public disclosure.
+Security Policy and Private Vulnerability Reporting (PVR) create a safe path for reporting vulnerabilities before they go public. Make it easy for people external to the project, such as users and security researchers, to report security bugs privately. [Documentation](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
 
 ### 3. Secret Scanning
-Detects exposed secrets (API keys, tokens, passwords) and enables push protection to block commits containing secrets. Secret scanning is automatically enabled for public repositories.
+Sensitive data like API keys, tokens, and passwords can accidentally be committed to your repository. Secret scanning with push protection guards over 300 token types and patterns from more than 180 service providers. [Documentation](https://docs.github.com/code-security/secret-scanning/about-secret-scanning)
 
 ### 4. Dependabot
-Monitors dependencies for known vulnerabilities, alerts you, and automatically creates PRs to update vulnerable packages.
+Dependabot keeps your dependencies safe effortlessly. Automatically checks your dependencies for known vulnerabilities and create pull requests to update them to safe versions. This saves you the hassle of manual checks and blocks threats. [Documentation](https://docs.github.com/en/code-security/getting-started/dependabot-quickstart-guide)
 
 ### 5. Code Scanning (CodeQL)
-Uses GitHub's CodeQL static analysis engine to detect security vulnerabilities (SQL injection, XSS, path traversal, etc.) and vulnerable GitHub Actions workflows (script injection, unsafe inputs) on every push and pull request. Uses GitHub's default setup — no workflow file needed.
+GitHub code scanning automatically detects common security vulnerabilities in your project and in your pull requests. Resolve them manually or with the help of Copilot Autofix AI-powered suggestions, before they are exploited against you and your users. [Documentation](https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning)
 
 ## Troubleshooting
 
