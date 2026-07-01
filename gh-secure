@@ -314,14 +314,13 @@ enable_branch_protection() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why: Prevents unauthorized changes to your main branch, enforces"
-    echo "  code review, and blocks force pushes."
+    echo "  Why enabling branch protection?"
+    echo "  Branch protection blocks unwanted changes to your project. Prevent"
+    echo "  accidental or malicious commits that may introduce vulnerabilities or"
+    echo "  disrupt the stability of your project. Branch rules give you flexible"
+    echo "  control over who can force push, delete, etc."
     echo ""
-    echo "  This will:"
-    echo "    • Require 1 pull request review before merging"
-    echo "    • Dismiss stale reviews when new commits are pushed"
-    echo "    • Prevent force pushes and branch deletion"
-    echo "    • Require conversation resolution before merging"
+    echo "  Docs: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches"
   fi
 
   if ! confirm "Enable branch protection?"; then
@@ -375,12 +374,13 @@ enable_vulnerability_reporting() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why: Lets security researchers privately report vulnerabilities to you,"
-    echo "  giving you time to fix them before public disclosure."
+    echo "  Why enabling private vulnerability reporting?"
+    echo "  Security Policy and Private Vulnerability Reporting (PVR) create a safe"
+    echo "  path for reporting vulnerabilities before they go public. Make it easy for"
+    echo "  people external to the project, such as users and security researchers, to"
+    echo "  report security bugs privately."
     echo ""
-    echo "  This will:"
-    echo "    • Enable a private channel for vulnerability reports"
-    echo "    • Create a reporting form at: github.com/${OWNER}/${REPO_NAME}/security/advisories/new"
+    echo "  Docs: https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability"
   fi
 
   if ! confirm "Enable private vulnerability reporting?"; then
@@ -422,12 +422,12 @@ enable_secret_scanning() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why: Detects exposed secrets (API keys, tokens, passwords) in your code"
-    echo "  and prevents them from being committed."
+    echo "  Why enabling secret scanning?"
+    echo "  Sensitive data like API keys, tokens, and passwords can accidentally be"
+    echo "  committed to your repository. Secret scanning with push protection guards"
+    echo "  over 300 token types and patterns from more than 180 service providers."
     echo ""
-    echo "  This will:"
-    echo "    • Block pushes that contain secrets (push protection)"
-    echo "    • Alert you if secrets are detected"
+    echo "  Docs: https://docs.github.com/code-security/secret-scanning/about-secret-scanning"
   fi
 
   if ! confirm "Enable secret scanning push protection?"; then
@@ -465,12 +465,13 @@ enable_dependabot() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why: Monitors your dependencies for known vulnerabilities and"
-    echo "  automatically creates PRs to update them."
+    echo "  Why enabling Dependabot?"
+    echo "  Dependabot keeps your dependencies safe effortlessly. Automatically checks"
+    echo "  your dependencies for known vulnerabilities and create pull requests to"
+    echo "  update them to safe versions. This saves you the hassle of manual checks"
+    echo "  and blocks threats."
     echo ""
-    echo "  This will:"
-    echo "    • Alert you when dependencies have known vulnerabilities"
-    echo "    • Automatically create PRs to update vulnerable dependencies"
+    echo "  Docs: https://docs.github.com/en/code-security/getting-started/dependabot-quickstart-guide"
   fi
 
   if ! confirm "Enable Dependabot?"; then
@@ -518,15 +519,13 @@ enable_code_scanning() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why: Uses static analysis (CodeQL) to find security vulnerabilities"
-    echo "  like SQL injection, XSS, and path traversal in your code, and detects"
-    echo "  vulnerable GitHub Actions workflows (e.g. script injection, unsafe inputs)."
+    echo "  Why enabling code scanning?"
+    echo "  GitHub code scanning automatically detects common security vulnerabilities"
+    echo "  in your project and in your pull requests. Resolve them manually or with"
+    echo "  the help of Copilot Autofix AI-powered suggestions, before they are"
+    echo "  exploited against you and your users."
     echo ""
-    echo "  This will:"
-    echo "    • Automatically scan code on every push and pull request"
-    echo "    • Detect common security vulnerabilities and coding errors"
-    echo "    • Identify vulnerable GitHub Actions workflows"
-    echo "    • Use GitHub's default CodeQL configuration (no workflow file needed)"
+    echo "  Docs: https://docs.github.com/en/code-security/code-scanning/introduction-to-code-scanning/about-code-scanning"
   fi
 
   if ! confirm "Enable code scanning (CodeQL)?"; then
