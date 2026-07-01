@@ -129,6 +129,10 @@ Examples:
   gh secure --all --dry-run                  # Preview what would be enabled
   gh secure status                           # Check current feature status
   gh secure status --repo owner/repo         # Check status of specific repo
+
+Documentation & FAQ:
+  https://github.com/GitHubSecurityLab/gh-secure#readme
+  https://github.com/GitHubSecurityLab/gh-secure#faq
 EOF
 }
 

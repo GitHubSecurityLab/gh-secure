@@ -84,6 +84,32 @@ Some organizations have policies that restrict branch protection. Contact your o
 - [GitHub Security Documentation](https://docs.github.com/en/code-security)
 - [CodeQL Documentation](https://codeql.github.com/docs/)
 
+## FAQ
+
+### What permissions do I need and why?
+
+You need **admin** or **maintain** permissions on the target repository. This is because enabling security features (branch protection rules, code scanning, secret scanning, Dependabot, and vulnerability reporting) requires write access to repository settings. For organization repositories, you may also need the `admin:org` OAuth scope — run `gh auth refresh -s admin:org` to add it.
+
+### How do I authenticate?
+
+`gh-secure` uses the [GitHub CLI](https://cli.github.com) authentication. Run `gh auth status` to check your current session. If you are not authenticated, run `gh auth login` and follow the prompts. The tool inherits whatever token and scopes your `gh` session has.
+
+### What are the implications of these changes for my project?
+
+Enabling these features adds protective guardrails but does not change your source code:
+
+- **Branch protection** may require contributors to open pull requests instead of pushing directly to the default branch.
+- **Secret scanning** will block pushes that contain detected secrets (push protection) and alert on any secrets already present in the repository history.
+- **Dependabot** will open pull requests to update vulnerable dependencies — you still decide whether to merge them.
+- **Code scanning** runs on every push and pull request; findings appear as alerts but do not block merges unless you configure that separately.
+- **Private vulnerability reporting** opens a channel for external reporters but does not expose any private information.
+
+All of these settings can be reverted at any time from your repository settings, with no impact on the project.
+
+### Will my project be secure?
+
+These features significantly raise the security baseline of your project, but no tool can guarantee complete security. They help you detect and prevent common issues — leaked secrets, known vulnerable dependencies, code-level vulnerabilities, and unauthorized changes — but security is an ongoing process. Regularly review alerts, keep dependencies up to date, and follow the [GitHub Security Documentation](https://docs.github.com/en/code-security) for additional best practices.
+
 ## License
 
 MIT License
