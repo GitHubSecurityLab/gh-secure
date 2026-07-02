@@ -112,4 +112,12 @@ These features significantly raise the security baseline of your project, but no
 
 ## License
 
-MIT License
+This project is licensed under the terms of the MIT open source license. Please refer to the [LICENSE](./LICENSE.txt) file for the full terms.
+
+## Maintainers
+
+See [CODEOWNERS](./CODEOWNERS) or reach out to the GitHub Security Lab team.
+
+## Support
+
+See [SUPPORT.md](./SUPPORT.md) for details on how to get help with this project.
