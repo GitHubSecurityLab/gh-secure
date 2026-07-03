@@ -319,7 +319,7 @@ enable_branch_protection() {
   if ! $ENABLE_ALL; then
     echo ""
     echo "  Why enable branch protection?"
-    echo "  Branch protection blocks unwanted changes to your project. Prevent"
+    echo "  Branch protection blocks unwanted changes to your project. It prevents"
     echo "  accidental or malicious commits that may introduce vulnerabilities or"
     echo "  disrupt the stability of your project. Branch rules give you flexible"
     echo "  control over who can force push, delete, etc."
