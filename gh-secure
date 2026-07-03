@@ -378,7 +378,7 @@ enable_vulnerability_reporting() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why enabling private vulnerability reporting?"
+    echo "  Why enable private vulnerability reporting?"
     echo "  Security Policy and Private Vulnerability Reporting (PVR) create a safe"
     echo "  path for reporting vulnerabilities before they go public. Make it easy for"
     echo "  people external to the project, such as users and security researchers, to"
@@ -426,7 +426,7 @@ enable_secret_scanning() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why enabling secret scanning?"
+    echo "  Why enable secret scanning?"
     echo "  Sensitive data like API keys, tokens, and passwords can accidentally be"
     echo "  committed to your repository. Secret scanning with push protection guards"
     echo "  over 300 token types and patterns from more than 180 service providers."
@@ -469,7 +469,7 @@ enable_dependabot() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why enabling Dependabot?"
+    echo "  Why enable Dependabot?"
     echo "  Dependabot keeps your dependencies safe. It automatically checks"
     echo "  your dependencies for known vulnerabilities and creates pull requests to"
     echo "  update them to safe versions. This saves you the hassle of manual checks"
@@ -523,7 +523,7 @@ enable_code_scanning() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    echo "  Why enabling code scanning?"
+    echo "  Why enable code scanning?"
     echo "  GitHub code scanning automatically detects common security vulnerabilities"
     echo "  in your project and in your pull requests. Resolve them manually or with"
     echo "  the help of Copilot Autofix AI-powered suggestions, before they are"
