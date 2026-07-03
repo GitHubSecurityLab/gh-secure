@@ -470,8 +470,8 @@ enable_dependabot() {
   if ! $ENABLE_ALL; then
     echo ""
     echo "  Why enabling Dependabot?"
-    echo "  Dependabot keeps your dependencies safe effortlessly. Automatically checks"
-    echo "  your dependencies for known vulnerabilities and create pull requests to"
+    echo "  Dependabot keeps your dependencies safe. It automatically checks"
+    echo "  your dependencies for known vulnerabilities and creates pull requests to"
     echo "  update them to safe versions. This saves you the hassle of manual checks"
     echo "  and blocks threats."
     echo ""
