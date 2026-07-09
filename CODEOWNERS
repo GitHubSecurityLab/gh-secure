@@ -1,0 +1,10 @@
+# CODEOWNERS
+#
+# These owners are automatically requested for review when someone opens a
+# pull request that modifies matching files. Order matters: the last matching
+# pattern takes precedence.
+#
+# Docs: https://docs.github.com/articles/about-code-owners
+
+# Default owner for everything in the repository
+* @xcorail @kevinbackhouse
