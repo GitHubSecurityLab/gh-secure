@@ -347,14 +347,6 @@ enable_branch_protection() {
 
   if ! $ENABLE_ALL; then
     echo ""
-    if $has_rulesets; then
-      echo -e "  ${YELLOW}⚠ This repository has ${ACTIVE_RULESETS_COUNT} active ruleset(s): ${ACTIVE_RULESETS_NAMES}${RESET}"
-      echo "  Rulesets may already provide branch protection (e.g., requiring pull"
-      echo "  requests, status checks, or blocking force pushes). Enabling legacy"
-      echo "  branch protection could create overlapping or conflicting rules."
-      echo "  Review your rulesets before deciding."
-      echo ""
-    fi
     echo "  Why enable branch protection?"
     echo "  Branch protection blocks unwanted changes to your project. It prevents"
     echo "  accidental or malicious commits that may introduce vulnerabilities or"
@@ -362,6 +354,14 @@ enable_branch_protection() {
     echo "  control over who can force push, delete, etc."
     echo ""
     echo "  Docs: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches"
+    if $has_rulesets; then
+      echo ""
+      echo -e "  ${YELLOW}⚠ This repository has ${ACTIVE_RULESETS_COUNT} active ruleset(s): ${ACTIVE_RULESETS_NAMES}${RESET}"
+      echo "  Rulesets may already provide branch protection (e.g., requiring pull"
+      echo "  requests, status checks, or blocking force pushes). Enabling legacy"
+      echo "  branch protection could create overlapping or conflicting rules."
+      echo "  Review your rulesets before deciding."
+    fi
   fi
 
   if $has_rulesets; then
