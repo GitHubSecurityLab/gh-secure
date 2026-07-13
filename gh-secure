@@ -247,6 +247,26 @@ check_branch_protection() {
   gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" >/dev/null 2>&1
 }
 
+# Returns 0 if active rulesets exist; sets ACTIVE_RULESETS_COUNT and ACTIVE_RULESETS_NAMES
+ACTIVE_RULESETS_COUNT=0
+ACTIVE_RULESETS_NAMES=""
+
+check_rulesets() {
+  local rulesets_info
+  rulesets_info=$(gh api "repos/${OWNER}/${REPO_NAME}/rulesets" \
+    --jq '[.[] | select(.enforcement == "active")] | "\(length)\n\([.[].name] | join(", "))"' 2>/dev/null || echo "")
+
+  if [ -z "$rulesets_info" ]; then
+    ACTIVE_RULESETS_COUNT=0
+    return 1
+  fi
+
+  ACTIVE_RULESETS_COUNT=$(echo "$rulesets_info" | head -n1)
+  ACTIVE_RULESETS_NAMES=$(echo "$rulesets_info" | tail -n1)
+
+  [ "$ACTIVE_RULESETS_COUNT" -gt 0 ] 2>/dev/null
+}
+
 check_vulnerability_reporting() {
   local result
   result=$(gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" --jq '.enabled' 2>/dev/null || echo "false")
@@ -294,6 +314,10 @@ show_status() {
     else
       print_error "${features[$i]} — not enabled"
     fi
+    # Show ruleset info alongside branch protection status
+    if [ "$i" -eq 0 ] && check_rulesets; then
+      print_info "${ACTIVE_RULESETS_COUNT} active ruleset(s) found: ${ACTIVE_RULESETS_NAMES}"
+    fi
   done
 
   echo ""
@@ -316,8 +340,21 @@ enable_branch_protection() {
     return 2
   fi
 
+  local has_rulesets=false
+  if check_rulesets; then
+    has_rulesets=true
+  fi
+
   if ! $ENABLE_ALL; then
     echo ""
+    if $has_rulesets; then
+      echo -e "  ${YELLOW}⚠ This repository has ${ACTIVE_RULESETS_COUNT} active ruleset(s): ${ACTIVE_RULESETS_NAMES}${RESET}"
+      echo "  Rulesets may already provide branch protection (e.g., requiring pull"
+      echo "  requests, status checks, or blocking force pushes). Enabling legacy"
+      echo "  branch protection could create overlapping or conflicting rules."
+      echo "  Review your rulesets before deciding."
+      echo ""
+    fi
     echo "  Why enable branch protection?"
     echo "  Branch protection blocks unwanted changes to your project. It prevents"
     echo "  accidental or malicious commits that may introduce vulnerabilities or"
@@ -327,7 +364,15 @@ enable_branch_protection() {
     echo "  Docs: https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches"
   fi
 
-  if ! confirm "Enable branch protection?"; then
+  if $has_rulesets; then
+    # Always prompt when rulesets exist, even with --all
+    printf "\n%b" "Active rulesets detected. Still enable branch protection? (y/n): "
+    read -r answer
+    if [[ ! "$answer" =~ ^[Yy]$ ]]; then
+      print_skip "Skipped branch protection (active rulesets already in place)"
+      return 1
+    fi
+  elif ! confirm "Enable branch protection?"; then
     print_skip "Skipped branch protection"
     return 1
   fi
