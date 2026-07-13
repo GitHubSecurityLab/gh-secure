@@ -253,10 +253,8 @@ ACTIVE_RULESETS_NAMES=""
 
 check_rulesets() {
   local rulesets_info
-  rulesets_info=$(gh api "repos/${OWNER}/${REPO_NAME}/rulesets" \
-    --jq '[.[] | select(.enforcement == "active")] | "\(length)\n\([.[].name] | join(", "))"' 2>/dev/null || echo "")
-
-  if [ -z "$rulesets_info" ]; then
+  if ! rulesets_info=$(gh api "repos/${OWNER}/${REPO_NAME}/rulesets" \
+    --jq '[.[] | select(.enforcement == "active")] | "\(length)\n\([.[].name] | join(", "))"' 2>/dev/null); then
     ACTIVE_RULESETS_COUNT=0
     return 1
   fi
