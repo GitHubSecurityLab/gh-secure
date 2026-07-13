@@ -53,7 +53,7 @@ Pass one or more feature names to enable only specific features. If none are spe
 This tool enables five security features based on [GitHub Security Lab recommendations](https://securitylab.github.com/protect-your-project.html):
 
 ### 1. Branch Protection
-Branch protection blocks unwanted changes to your project. Prevent accidental or malicious commits that may introduce vulnerabilities or disrupt the stability of your project. Branch rules give you flexible control over who can force push, delete, etc. [Documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches)
+Branch protection blocks unwanted changes to your project. Prevent accidental or malicious commits that may introduce vulnerabilities or disrupt the stability of your project. Branch rules give you flexible control over who can force push, delete, etc. If your repository already has active [rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets), `gh secure` will warn you before enabling legacy branch protection to avoid overlapping or conflicting rules. [Documentation](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches)
 
 ### 2. Private Vulnerability Reporting
 Security Policy and Private Vulnerability Reporting (PVR) create a safe path for reporting vulnerabilities before they go public. Make it easy for people external to the project, such as users and security researchers, to report security bugs privately. [Documentation](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability)
@@ -76,7 +76,7 @@ Ensure you have admin or maintain permissions on the repository. For org repos, 
 Ensure the repository contains [supported languages](https://codeql.github.com/docs/codeql-overview/supported-languages-and-frameworks/) and that code scanning is available for your plan.
 
 ### Branch Protection Fails
-Some organizations have policies that restrict branch protection. Contact your org admin.
+Some organizations have policies that restrict branch protection. Contact your org admin. If your repository uses [rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets), you may not need legacy branch protection at all — `gh secure` will detect active rulesets and prompt you before enabling it.
 
 ## Resources
 
