@@ -386,6 +386,7 @@ enable_branch_protection() {
 
   if gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
     --method PUT \
+    --header "User-Agent: gh-secure" \
     --field "required_status_checks=null" \
     --field "enforce_admins=false" \
     --field "restrictions=null" \
@@ -401,7 +402,7 @@ enable_branch_protection() {
     # Fallback: use raw JSON input
     local payload='{"required_status_checks":null,"enforce_admins":false,"required_pull_request_reviews":{"required_approving_review_count":1,"dismiss_stale_reviews":true,"require_code_owner_reviews":false},"restrictions":null,"allow_force_pushes":false,"allow_deletions":false,"required_conversation_resolution":true}'
     if echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
-      --method PUT --input - >/dev/null 2>&1; then
+      --method PUT --header "User-Agent: gh-secure" --input - >/dev/null 2>&1; then
       print_success "Branch protection enabled on ${default_branch}"
     else
       print_error "Failed to enable branch protection"
@@ -443,11 +444,12 @@ enable_vulnerability_reporting() {
   local status_code
   status_code=$(gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" \
     --method PUT \
+    --header "User-Agent: gh-secure" \
     --silent \
     2>&1 && echo "204" || echo "error")
 
   # gh api returns success on 204
-  if gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" --method PUT >/dev/null 2>&1; then
+  if gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" --method PUT --header "User-Agent: gh-secure" >/dev/null 2>&1; then
     print_success "Private vulnerability reporting enabled"
     print_info "Report URL: https://github.com/${OWNER}/${REPO_NAME}/security/advisories/new"
   else
@@ -488,7 +490,7 @@ enable_secret_scanning() {
   fi
 
   local payload='{"security_and_analysis":{"secret_scanning_push_protection":{"status":"enabled"}}}'
-  if echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}" --method PATCH --input - >/dev/null 2>&1; then
+  if echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}" --method PATCH --header "User-Agent: gh-secure" --input - >/dev/null 2>&1; then
     print_success "Secret scanning push protection enabled"
   else
     print_error "Failed to enable push protection"
@@ -534,7 +536,7 @@ enable_dependabot() {
 
   # Enable alerts
   if ! $alerts_ok; then
-    if gh api "repos/${OWNER}/${REPO_NAME}/vulnerability-alerts" --method PUT >/dev/null 2>&1; then
+    if gh api "repos/${OWNER}/${REPO_NAME}/vulnerability-alerts" --method PUT --header "User-Agent: gh-secure" >/dev/null 2>&1; then
       print_success "Dependabot alerts enabled"
     else
       print_warning "Failed to enable Dependabot alerts"
@@ -545,7 +547,7 @@ enable_dependabot() {
 
   # Enable security updates
   if ! $updates_ok; then
-    if gh api "repos/${OWNER}/${REPO_NAME}/automated-security-fixes" --method PUT >/dev/null 2>&1; then
+    if gh api "repos/${OWNER}/${REPO_NAME}/automated-security-fixes" --method PUT --header "User-Agent: gh-secure" >/dev/null 2>&1; then
       print_success "Dependabot security updates enabled"
     else
       print_warning "Failed to enable Dependabot security updates"
@@ -587,7 +589,7 @@ enable_code_scanning() {
 
   local payload='{"state":"configured","query_suite":"default"}'
   local run_url
-  if run_url=$(echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/code-scanning/default-setup" --method PATCH --input - --jq '.run_url // empty' 2>&1); then
+  if run_url=$(echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/code-scanning/default-setup" --method PATCH --header "User-Agent: gh-secure" --input - --jq '.run_url // empty' 2>&1); then
     print_success "Code scanning default setup enabled"
     if [ -n "$run_url" ]; then
       print_info "CodeQL analysis triggered: ${run_url}"
