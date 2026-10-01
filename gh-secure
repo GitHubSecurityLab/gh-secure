@@ -182,7 +182,7 @@ resolve_repo() {
   if [ -n "$REPO" ]; then
     OWNER="${REPO%%/*}"
     REPO_NAME="${REPO##*/}"
-    if [ "$OWNER" = "$REPO_NAME" ] || [ -z "$OWNER" ] || [ -z "$REPO_NAME" ]; then
+    if [[ "$REPO" != */* ]] || [ -z "$OWNER" ] || [ -z "$REPO_NAME" ]; then
       echo "Error: Repository must be in 'owner/repo' format"
       exit 1
     fi
@@ -200,7 +200,7 @@ resolve_repo() {
     read -r REPO
     OWNER="${REPO%%/*}"
     REPO_NAME="${REPO##*/}"
-    if [ -z "$OWNER" ] || [ -z "$REPO_NAME" ]; then
+    if [[ "$REPO" != */* ]] || [ -z "$OWNER" ] || [ -z "$REPO_NAME" ]; then
       echo "Error: Repository must be in 'owner/repo' format"
       exit 1
     fi
