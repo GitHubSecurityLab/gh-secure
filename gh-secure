@@ -28,6 +28,10 @@ REPO_NAME=""
 SUBCOMMAND=""
 SELECTED_FEATURES=()
 
+# Set by api_write on failure. Declared here rather than as a local in the helper so that a
+# caller can inspect it after the call without the helper having to echo it.
+API_WRITE_ERROR=""
+
 # Valid feature names (long and short forms)
 ALL_FEATURES=("branch-protection" "vulnerability-reporting" "secret-scanning" "dependabot" "code-scanning")
 
@@ -82,6 +86,43 @@ confirm() {
   printf "\n%b" "$prompt (y/n): "
   read -r answer
   [[ "$answer" =~ ^[Yy]$ ]]
+}
+
+# Run a WRITE call and, when it fails, show what GitHub said.
+#
+# Every mutating call in this script used `>/dev/null 2>&1`, which discarded the API's own
+# error text. On a security tool that is the difference between "your branch protection was
+# not applied" and knowing whether it was a permissions problem, a missing plan, an invalid
+# field, or a ruleset conflict. The stdout redirect is kept because a successful write
+# returns a body nobody wants printed mid-summary; stderr is the part that was missing.
+#
+# Usage:
+#   if api_write "repos/o/r/rulesets" --method PUT --field 'x=1'; then
+#   if echo "$payload" | api_write "repos/o/r" --method PATCH --input -; then
+#
+# The pipeline form is why this is a function and not a flag: stdin has to reach `gh` for
+# the `--input -` calls, and a function keeps the call sites reading like the originals.
+api_write() {
+  local endpoint="$1"
+  shift
+  local api_err
+  API_WRITE_ERROR=""
+  gh api "$endpoint" "$@" 2>"$api_err" >/dev/null || {
+    API_WRITE_ERROR="$(cat "$api_err")"
+    return 1
+  }
+  return 0
+}
+
+# Print a failed write's captured stderr, indented, so the reason lands under our own
+# message instead of as raw JSON in the middle of the summary.
+print_api_error() {
+  if [ -n "${1:-$API_WRITE_ERROR}" ]; then
+    print_info "GitHub said:"
+    echo "$1" | head -n 12 | while IFS= read -r line; do
+      print_info "  $line"
+    done
+  fi
 }
 
 separator() {
@@ -253,16 +294,43 @@ ACTIVE_RULESETS_NAMES=""
 
 check_rulesets() {
   local rulesets_info
+  # The filter builds the array ONCE and then derives both values from it.
+  #
+  # This used to read:
+  #   [.[] | select(.enforcement == "active")] | "\(length)\n\([.[].name] | join(", "))"
+  # where the `|` inside the \(...) interpolation closed the OUTER pipe, so `[.[].name]`
+  # was evaluated against the string `"\(length)\n"` rather than against the array. The
+  # names were never produced, the count came back non-numeric, the `-gt` test below
+  # failed, and `2>/dev/null` swallowed the error. `check_rulesets` therefore always
+  # returned false, which meant `has_rulesets` was always false, which meant the warning
+  # and the confirmation prompt that are supposed to stop a user from stacking legacy
+  # branch protection on top of an active ruleset never ran. A repository with rulesets
+  # enabled got branch protection applied without ever being told there was a conflict.
+  #
+  # Binding to a variable first also means the two values cannot disagree, which they could
+  # not when they were `head -n1` and `tail -n1` of the same string.
   if ! rulesets_info=$(gh api "repos/${OWNER}/${REPO_NAME}/rulesets" \
-    --jq '[.[] | select(.enforcement == "active")] | "\(length)\n\([.[].name] | join(", "))"' 2>/dev/null); then
+    --jq '[.[] | select(.enforcement == "active")] as $active | "\($active | length)\t\($active | map(.name) | join(", "))"' 2>/dev/null); then
     ACTIVE_RULESETS_COUNT=0
+    ACTIVE_RULESETS_NAMES=""
     return 1
   fi
 
-  ACTIVE_RULESETS_COUNT=$(echo "$rulesets_info" | head -n1)
-  ACTIVE_RULESETS_NAMES=$(echo "$rulesets_info" | tail -n1)
+  # TAB-separated rather than newline-separated: a ruleset name may not contain a newline,
+  # but the previous two-line split would also have silently mis-parsed any name that did.
+  IFS=$'\t' read -r ACTIVE_RULESETS_COUNT ACTIVE_RULESETS_NAMES <<< "$rulesets_info"
 
-  [ "$ACTIVE_RULESETS_COUNT" -gt 0 ] 2>/dev/null
+  # Guard the arithmetic instead of suppressing it. `2>/dev/null` on a `[ -gt ]` is what
+  # turned a parse error into a false negative; an explicit guard turns it into a visible
+  # one, and still fails closed if GitHub ever returns something unexpected.
+  if ! [[ "$ACTIVE_RULESETS_COUNT" =~ ^[0-9]+$ ]]; then
+    print_warning "Could not read the active ruleset count (got: '${ACTIVE_RULESETS_COUNT}')"
+    ACTIVE_RULESETS_COUNT=0
+    ACTIVE_RULESETS_NAMES=""
+    return 1
+  fi
+
+  [ "$ACTIVE_RULESETS_COUNT" -gt 0 ]
 }
 
 check_vulnerability_reporting() {
@@ -380,11 +448,23 @@ enable_branch_protection() {
   print_info "Default branch: ${default_branch}"
 
   if $DRY_RUN; then
-    print_success "[DRY RUN] Would enable branch protection on ${default_branch}"
+    print_success "[DRY RUN] Would PUT branch protection to ${OWNER}/${REPO_NAME} branch ${default_branch}"
+    # Said plainly because CONTRIBUTING recommends --dry-run as the way to test this
+    # script, and a dry run that reads like a guarantee is worse than no dry run at all:
+    # it makes a call that can still be rejected (permissions, plan, an invalid field, a
+    # ruleset conflict) look like it has been proven. The write below is never attempted,
+    # so nothing here has been validated against the API.
+    print_info "Not validated: the PUT is skipped, so a rejection would not be reported here."
     return 0
   fi
 
-  if gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
+  # The API's own error text is the most useful thing available when a write fails: it
+  # names the field GitHub rejected and often the reason. Redirecting stderr to /dev/null
+  # here threw that away, so a rejected branch protection printed
+  # "Failed to enable branch protection" and nothing else. For the one call that protects a
+  # branch, that is the worst possible failure mode: the run looks clean and the protection
+  # is not there.
+  if api_write "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
     --method PUT \
     --header "User-Agent: gh-secure" \
     --field "required_status_checks=null" \
@@ -395,17 +475,21 @@ enable_branch_protection() {
     --field "required_conversation_resolution=true" \
     -f 'required_pull_request_reviews[required_approving_review_count]=1' \
     -F 'required_pull_request_reviews[dismiss_stale_reviews]=true' \
-    -F 'required_pull_request_reviews[require_code_owner_reviews]=false' \
-    >/dev/null 2>&1; then
+    -F 'required_pull_request_reviews[require_code_owner_reviews]=false'; then
     print_success "Branch protection enabled on ${default_branch}"
   else
     # Fallback: use raw JSON input
     local payload='{"required_status_checks":null,"enforce_admins":false,"required_pull_request_reviews":{"required_approving_review_count":1,"dismiss_stale_reviews":true,"require_code_owner_reviews":false},"restrictions":null,"allow_force_pushes":false,"allow_deletions":false,"required_conversation_resolution":true}'
-    if echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
-      --method PUT --header "User-Agent: gh-secure" --input - >/dev/null 2>&1; then
+    if echo "$payload" | api_write "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
+      --method PUT --header "User-Agent: gh-secure" --input -; then
       print_success "Branch protection enabled on ${default_branch}"
     else
-      print_error "Failed to enable branch protection"
+      print_error "Failed to enable branch protection on ${default_branch}"
+      # Last word from the API, if there is one. `gh api` reports the HTTP status and
+      # GitHub's own message, which is the difference between "check your permissions"
+      # and a guess.
+      print_api_error
+      print_info "Enable manually: https://github.com/${OWNER}/${REPO_NAME}/settings/branches"
       return 1
     fi
   fi
@@ -441,15 +525,17 @@ enable_vulnerability_reporting() {
     return 0
   fi
 
-  local status_code
-  status_code=$(gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" \
+  # This used to make the PUT twice: once into a `status_code` local that was never read
+  # again, and once again in the `if`. Every run issued two identical mutations and threw
+  # away the first result. One call, one result.
+  #
+  # `--silent` is NOT passed here. It was on the discarded call and it is what kept the
+  # endpoint's 204 body out of the way; the condition below redirects anyway, so nothing
+  # leaks to the terminal either way.
+  if gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" \
     --method PUT \
     --header "User-Agent: gh-secure" \
-    --silent \
-    2>&1 && echo "204" || echo "error")
-
-  # gh api returns success on 204
-  if gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" --method PUT --header "User-Agent: gh-secure" >/dev/null 2>&1; then
+    >/dev/null; then
     print_success "Private vulnerability reporting enabled"
     print_info "Report URL: https://github.com/${OWNER}/${REPO_NAME}/security/advisories/new"
   else
@@ -490,10 +576,11 @@ enable_secret_scanning() {
   fi
 
   local payload='{"security_and_analysis":{"secret_scanning_push_protection":{"status":"enabled"}}}'
-  if echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}" --method PATCH --header "User-Agent: gh-secure" --input - >/dev/null 2>&1; then
+  if echo "$payload" | api_write "repos/${OWNER}/${REPO_NAME}" --method PATCH --header "User-Agent: gh-secure" --input -; then
     print_success "Secret scanning push protection enabled"
   else
     print_error "Failed to enable push protection"
+    print_api_error
     print_info "Enable manually: https://github.com/${OWNER}/${REPO_NAME}/settings/security_analysis"
     return 1
   fi
@@ -536,10 +623,11 @@ enable_dependabot() {
 
   # Enable alerts
   if ! $alerts_ok; then
-    if gh api "repos/${OWNER}/${REPO_NAME}/vulnerability-alerts" --method PUT --header "User-Agent: gh-secure" >/dev/null 2>&1; then
+    if api_write "repos/${OWNER}/${REPO_NAME}/vulnerability-alerts" --method PUT --header "User-Agent: gh-secure"; then
       print_success "Dependabot alerts enabled"
     else
       print_warning "Failed to enable Dependabot alerts"
+      print_api_error
     fi
   else
     print_success "Dependabot alerts already enabled"
@@ -547,10 +635,11 @@ enable_dependabot() {
 
   # Enable security updates
   if ! $updates_ok; then
-    if gh api "repos/${OWNER}/${REPO_NAME}/automated-security-fixes" --method PUT --header "User-Agent: gh-secure" >/dev/null 2>&1; then
+    if api_write "repos/${OWNER}/${REPO_NAME}/automated-security-fixes" --method PUT --header "User-Agent: gh-secure"; then
       print_success "Dependabot security updates enabled"
     else
       print_warning "Failed to enable Dependabot security updates"
+      print_api_error
     fi
   else
     print_success "Dependabot security updates already enabled"
@@ -588,14 +677,28 @@ enable_code_scanning() {
   fi
 
   local payload='{"state":"configured","query_suite":"default"}'
-  local run_url
-  if run_url=$(echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/code-scanning/default-setup" --method PATCH --header "User-Agent: gh-secure" --input - --jq '.run_url // empty' 2>&1); then
+  local run_url api_err
+  # stdout and stderr are captured separately here instead of the previous `2>&1`.
+  # `api_write` is not usable on this call because the run URL comes back on stdout and is
+  # worth showing, but merging the streams meant any warning `gh` emitted was pasted into
+  # that URL. On failure `run_url` held the error text, which was then discarded by the
+  # else branch, so a rejected code scanning setup again showed no reason.
+  #
+  # The assignment stays inside the `if` condition on purpose. This script runs `set -e`, so
+  # a standalone `run_url=$(...)` whose substitution fails would abort the shell before the
+  # error could be inspected. Testing the exit status with `[ $? -eq 0 ]` afterwards would
+  # make the else branch unreachable and any rejected setup would kill the run with no
+  # message. As a condition, the failure is handled instead of fatal.
+  if run_url=$(echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/code-scanning/default-setup" \
+    --method PATCH --header "User-Agent: gh-secure" --input - \
+    --jq '.run_url // empty' 2>"$api_err"); then
     print_success "Code scanning default setup enabled"
     if [ -n "$run_url" ]; then
       print_info "CodeQL analysis triggered: ${run_url}"
     fi
   else
     print_error "Failed to enable code scanning"
+    print_api_error "$(cat "$api_err")"
     print_info "Set up manually: https://github.com/${OWNER}/${REPO_NAME}/security/code-scanning"
     return 1
   fi

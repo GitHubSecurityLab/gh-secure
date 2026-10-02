@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      # The mutating calls are quoted and redirected consistently, but shellcheck is what
+      # keeps a future edit from reintroducing an unquoted expansion into a gh api URL.
+      - name: shellcheck
+        run: shellcheck gh-secure
+
+      # The suite stubs gh api, so it needs no GITHUB_TOKEN and writes to nothing. It is the
+      # only place that exercises the ruleset detection that enable_branch_protection
+      # depends on for its conflict warning.
+      - name: Run tests
+        run: ./tests/run_tests.sh

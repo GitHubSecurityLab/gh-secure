@@ -1,0 +1,6 @@
+# Shell scripts must be LF in the working tree. A CRLF line ending after the shebang makes
+# `#!/usr/bin/env bash` fail with "bad interpreter: No such file or directory" on Linux and
+# macOS, which breaks running the script directly and breaks any CI step that invokes it as
+# an executable.
+*.sh text eol=lf
+gh-secure text eol=lf
