@@ -1,0 +1,7 @@
+# Shell scripts must use LF. A CR after the shebang makes `#!/usr/bin/env bash` fail with
+# "bad interpreter" on Linux and macOS, and shellcheck reports SC1017 on every line.
+*.sh text eol=lf
+gh-secure text eol=lf
+
+# A stray CR can break the check suite the same way it breaks the main script.
+tests/*.sh text eol=lf

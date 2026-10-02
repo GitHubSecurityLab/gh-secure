@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq shellcheck
+
+      # SC2206 is pre-existing in the summary loop and is not touched by this change, so it
+      # is excluded here to keep the signal useful. Everything else at warning severity
+      # still fails, including SC2034, which is what caught the duplicated PUT in
+      # enable_vulnerability_reporting.
+      - name: shellcheck
+        run: |
+          shellcheck --severity=warning --exclude=SC2206 gh-secure
+          shellcheck --severity=warning tests/run_tests.sh
+
+      # The suite stubs gh on PATH, so it makes no network calls and needs no token.
+      - name: Run tests
+        run: ./tests/run_tests.sh
