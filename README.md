@@ -16,6 +16,8 @@ A [GitHub CLI](https://cli.github.com) extension to enable security features on 
 
 Only an open source project on GitHub where you have admin access.
 
+> **Note:** `gh-secure` works best on **public repositories**. Some features (branch protection and private vulnerability reporting) are not available on free private repositories owned by personal accounts. In those cases, `gh-secure` will skip the feature and explain why instead of showing a generic error.
+
 ## How do I use it? 
 
 Running the tool will enable security features for your repository in 2 minutes or less.
@@ -103,6 +105,11 @@ Ensure the repository contains [supported languages](https://codeql.github.com/d
 
 ### Branch Protection Fails
 Some organizations have policies that restrict branch protection. Contact your org admin. If your repository uses [rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/about-rulesets), you may not need legacy branch protection at all — `gh secure` will detect active rulesets and prompt you before enabling it.
+
+If you see "Skipped branch protection (plan limitation)", the repository is a **private repository under a personal GitHub Free account**. Branch protection requires [GitHub Pro, Team, Enterprise, or a public repository](https://docs.github.com/get-started/learning-about-github/githubs-products).
+
+### Private Vulnerability Reporting Fails
+If you see "Skipped private vulnerability reporting (plan limitation)", the repository is a **private repository under a personal GitHub Free account**. Private vulnerability reporting requires [GitHub Pro, Team, Enterprise, or a public repository](https://docs.github.com/get-started/learning-about-github/githubs-products).
 
 ## Resources
 

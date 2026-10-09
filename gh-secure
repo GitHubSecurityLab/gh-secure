@@ -329,9 +329,51 @@ show_status() {
 
 # ─── Feature enablers ──────────────────────────────────────────────────────────
 
+# Captures stderr from a command without losing it.
+# Usage: capture_stderr <var> <command...>
+capture_stderr() {
+  local var="$1"
+  shift
+  local tmpfile
+  tmpfile=$(mktemp)
+  "$@" >/dev/null 2>"$tmpfile"
+  local rc=$?
+  eval "$var=\"\$(cat \"\$tmpfile\")\""
+  rm -f "$tmpfile"
+  return $rc
+}
+
+# Returns 0 if the GitHub API error message indicates a plan/visibility limitation.
+is_plan_limitation_error() {
+  local msg="$1"
+  echo "$msg" | grep -qiE "upgrade to github pro|make this repository public"
+}
+
+print_plan_limitation_skip() {
+  local feature="$1"
+  print_warning "${feature} requires GitHub Pro, Team, Enterprise, or a public repository"
+  print_skip "Skipped ${feature} (plan limitation)"
+}
+
+# Returns 0 if the repository is private and owned by a personal user account.
+# GitHub Free private repositories under personal accounts do not include
+# branch protection or private vulnerability reporting.
+is_private_user_repo() {
+  local repo_info
+  repo_info=$(gh api "repos/${OWNER}/${REPO_NAME}" --jq '[.private, .owner.type] | @tsv' 2>/dev/null)
+  local is_private owner_type
+  read -r is_private owner_type <<< "$repo_info"
+  [ "$is_private" = "true" ] && [ "$owner_type" = "User" ]
+}
+
 enable_branch_protection() {
   echo ""
   echo -e "${BOLD}=== Step 1: Branch Protection ===${RESET}"
+
+  if is_private_user_repo; then
+    print_plan_limitation_skip "Branch protection"
+    return 1
+  fi
 
   if check_branch_protection; then
     print_success "Already enabled — skipping"
@@ -384,7 +426,8 @@ enable_branch_protection() {
     return 0
   fi
 
-  if gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
+  local bp_error=""
+  if capture_stderr bp_error gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
     --method PUT \
     --header "User-Agent: gh-secure" \
     --field "required_status_checks=null" \
@@ -395,16 +438,24 @@ enable_branch_protection() {
     --field "required_conversation_resolution=true" \
     -f 'required_pull_request_reviews[required_approving_review_count]=1' \
     -F 'required_pull_request_reviews[dismiss_stale_reviews]=true' \
-    -F 'required_pull_request_reviews[require_code_owner_reviews]=false' \
-    >/dev/null 2>&1; then
+    -F 'required_pull_request_reviews[require_code_owner_reviews]=false'; then
     print_success "Branch protection enabled on ${default_branch}"
   else
+    if is_plan_limitation_error "$bp_error"; then
+      print_plan_limitation_skip "Branch protection"
+      return 1
+    fi
+
     # Fallback: use raw JSON input
     local payload='{"required_status_checks":null,"enforce_admins":false,"required_pull_request_reviews":{"required_approving_review_count":1,"dismiss_stale_reviews":true,"require_code_owner_reviews":false},"restrictions":null,"allow_force_pushes":false,"allow_deletions":false,"required_conversation_resolution":true}'
-    if echo "$payload" | gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
-      --method PUT --header "User-Agent: gh-secure" --input - >/dev/null 2>&1; then
+    if capture_stderr bp_error gh api "repos/${OWNER}/${REPO_NAME}/branches/${default_branch}/protection" \
+      --method PUT --header "User-Agent: gh-secure" --input - <<< "$payload"; then
       print_success "Branch protection enabled on ${default_branch}"
     else
+      if is_plan_limitation_error "$bp_error"; then
+        print_plan_limitation_skip "Branch protection"
+        return 1
+      fi
       print_error "Failed to enable branch protection"
       return 1
     fi
@@ -414,6 +465,11 @@ enable_branch_protection() {
 enable_vulnerability_reporting() {
   echo ""
   echo -e "${BOLD}=== Step 2: Private Vulnerability Reporting ===${RESET}"
+
+  if is_private_user_repo; then
+    print_plan_limitation_skip "Private vulnerability reporting"
+    return 1
+  fi
 
   if check_vulnerability_reporting; then
     print_success "Already enabled — skipping"
@@ -441,18 +497,17 @@ enable_vulnerability_reporting() {
     return 0
   fi
 
-  local status_code
-  status_code=$(gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" \
+  local vr_error=""
+  if capture_stderr vr_error gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" \
     --method PUT \
-    --header "User-Agent: gh-secure" \
-    --silent \
-    2>&1 && echo "204" || echo "error")
-
-  # gh api returns success on 204
-  if gh api "repos/${OWNER}/${REPO_NAME}/private-vulnerability-reporting" --method PUT --header "User-Agent: gh-secure" >/dev/null 2>&1; then
+    --header "User-Agent: gh-secure"; then
     print_success "Private vulnerability reporting enabled"
     print_info "Report URL: https://github.com/${OWNER}/${REPO_NAME}/security/advisories/new"
   else
+    if is_plan_limitation_error "$vr_error"; then
+      print_plan_limitation_skip "Private vulnerability reporting"
+      return 1
+    fi
     print_error "Failed to enable private vulnerability reporting"
     return 1
   fi
